@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/scottEAdams1/Chirpy/internal/database"
 )
@@ -13,6 +15,11 @@ type apiConfig struct {
 }
 
 func main() {
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if *dbg {
+		deleteDatabse()
+	}
 	//Create database
 	db, err := database.NewDB("database.json")
 	if err != nil {
@@ -48,4 +55,15 @@ func main() {
 	//Run server
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
+}
+
+func deleteDatabse() {
+	// Define the path to the JSON file
+	jsonFilePath := "./database.json"
+
+	// Attempt to remove the file
+	err := os.Remove(jsonFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
