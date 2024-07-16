@@ -17,8 +17,7 @@ func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		msg := string(err.Error())
-		respondWithError(w, 500, msg)
+		respondWithError(w, 500, err.Error())
 		return
 	}
 

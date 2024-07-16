@@ -15,11 +15,17 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chrips"`
+	Users  map[int]User  `json:"users"`
 }
 
 type Chirp struct {
 	ID   int    `json:"id"`
 	Body string `json:"body"`
+}
+
+type User struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
 }
 
 // Create a database
@@ -79,6 +85,48 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	return newChirp, nil
 }
 
+// Create a user
+func (db *DB) CreateUser(email string) (User, error) {
+	//Lock database
+	db.mux.Lock()
+	defer db.mux.Unlock()
+
+	//Load database into struct
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	//Get the id for the user
+	var nextID int
+	if len(dbStruct.Users) > 0 {
+		for id := range dbStruct.Users {
+			if id > nextID {
+				nextID = id
+			}
+		}
+		nextID++
+	} else {
+		nextID = 1
+	}
+
+	//Create User in form of a struct
+	newUser := User{
+		ID:    nextID,
+		Email: email,
+	}
+
+	//Add the user to the database struct
+	dbStruct.Users[newUser.ID] = newUser
+
+	//Write database struct to the database file as JSON
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser, nil
+}
+
 // Get chirps from the database in order of id
 func (db *DB) GetChirps() ([]Chirp, error) {
 	//Read lock database
@@ -108,6 +156,7 @@ func (db *DB) ensureDB() error {
 	if errors.Is(err, os.ErrNotExist) {
 		dbStruct := DBStructure{
 			Chirps: make(map[int]Chirp),
+			Users:  make(map[int]User),
 		}
 		return db.writeDB(dbStruct)
 	}
@@ -125,6 +174,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 	//Make database struct to hold the chirps
 	dbStructure := DBStructure{
 		Chirps: make(map[int]Chirp),
+		Users:  make(map[int]User),
 	}
 
 	//Convert the file data into the struct
