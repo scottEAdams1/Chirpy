@@ -26,6 +26,7 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	hashedPassword, err := bcrypt.GenerateFromPassword(bytePassword, 1)
 	if err != nil {
 		respondWithError(w, 400, err.Error())
+		return
 	}
 
 	//Create a user from the email

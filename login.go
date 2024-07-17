@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/scottEAdams1/Chirpy/internal/database"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -11,8 +14,9 @@ import (
 func (cfg *apiConfig) login(w http.ResponseWriter, r *http.Request) {
 	//Receive the body from the json
 	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
@@ -48,14 +52,35 @@ func (cfg *apiConfig) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var expirationTime time.Time
+	if params.ExpiresInSeconds == 0 || params.ExpiresInSeconds > 60*60*24 {
+		expirationTime = time.Now().UTC().Add(24 * time.Hour)
+	} else {
+		expirationTime = time.Now().UTC().Add(time.Duration(params.ExpiresInSeconds) * time.Second)
+	}
+
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "chirpy",
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(expirationTime),
+		Subject:   strconv.Itoa(user.ID),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte(cfg.jwtSecret))
+	if err != nil {
+		respondWithError(w, 400, err.Error())
+		return
+	}
 	type User struct {
 		ID    int    `json:"id"`
 		Email string `json:"email"`
+		Token string `json:"token"`
 	}
 
 	userResponse := User{
 		ID:    user.ID,
 		Email: user.Email,
+		Token: signedToken,
 	}
 	respondWithJSON(w, 200, userResponse)
 }

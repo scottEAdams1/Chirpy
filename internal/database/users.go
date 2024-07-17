@@ -3,6 +3,8 @@ package database
 import (
 	"errors"
 	"sort"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Create a user
@@ -74,4 +76,62 @@ func (db *DB) GetUsers() ([]User, error) {
 	//Order the users in order of email
 	sort.Slice(users, func(i, j int) bool { return users[i].Email < users[j].Email })
 	return users, nil
+}
+
+// Get a single user based on the id
+func (db *DB) GetUser(id int) (User, error) {
+	db.mux.RLock()
+	defer db.mux.RUnlock()
+
+	users, err := db.GetUsers()
+	if err != nil {
+		return User{}, err
+	}
+
+	var returnUser User
+	for _, user := range users {
+		if user.ID == id {
+			returnUser = user
+		}
+	}
+
+	if returnUser.Email == "" {
+		return User{}, errors.New("User doesn't exist")
+	}
+	return returnUser, nil
+}
+
+// Updates a user with new information
+func (db *DB) UpdateUser(id int, email string, password []byte) (User, error) {
+	//Lock database
+	db.mux.Lock()
+	defer db.mux.Unlock()
+
+	hashedPassword, err := bcrypt.GenerateFromPassword(password, 1)
+	if err != nil {
+		return User{}, err
+	}
+
+	//Create User in form of a struct
+	newUser := User{
+		ID:       id,
+		Email:    email,
+		Password: hashedPassword,
+	}
+
+	//Load database into struct
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	//Add the user to the database struct
+	dbStruct.Users[newUser.ID] = newUser
+
+	//Write database struct to the database file as JSON
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser, nil
 }
