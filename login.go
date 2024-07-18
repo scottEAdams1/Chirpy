@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -52,35 +54,57 @@ func (cfg *apiConfig) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Set the expiration time
 	var expirationTime time.Time
-	if params.ExpiresInSeconds == 0 || params.ExpiresInSeconds > 60*60*24 {
-		expirationTime = time.Now().UTC().Add(24 * time.Hour)
+	if params.ExpiresInSeconds == 0 || params.ExpiresInSeconds > 3600 {
+		expirationTime = time.Now().UTC().Add(1 * time.Hour)
 	} else {
 		expirationTime = time.Now().UTC().Add(time.Duration(params.ExpiresInSeconds) * time.Second)
 	}
 
+	//Set the claims of the JWT
 	claims := &jwt.RegisteredClaims{
 		Issuer:    "chirpy",
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		ExpiresAt: jwt.NewNumericDate(expirationTime),
 		Subject:   strconv.Itoa(user.ID),
 	}
+
+	//Create and sign the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString([]byte(cfg.jwtSecret))
 	if err != nil {
 		respondWithError(w, 400, err.Error())
 		return
 	}
+
+	//Create a refresh token
+	tokenBytes := make([]byte, 32)
+	_, err = rand.Read(tokenBytes)
+	if err != nil {
+		respondWithError(w, 400, err.Error())
+		return
+	}
+	refreshToken := hex.EncodeToString(tokenBytes)
+	_, err = cfg.DB.CreateToken(refreshToken, user.ID)
+	if err != nil {
+		respondWithError(w, 400, err.Error())
+		return
+	}
+
+	//Create a user response
 	type User struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
-		Token string `json:"token"`
+		ID           int    `json:"id"`
+		Email        string `json:"email"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	userResponse := User{
-		ID:    user.ID,
-		Email: user.Email,
-		Token: signedToken,
+		ID:           user.ID,
+		Email:        user.Email,
+		Token:        signedToken,
+		RefreshToken: refreshToken,
 	}
 	respondWithJSON(w, 200, userResponse)
 }

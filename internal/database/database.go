@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"sync"
+	"time"
 )
 
 type DB struct {
@@ -13,8 +14,9 @@ type DB struct {
 }
 
 type DBStructure struct {
-	Chirps map[int]Chirp `json:"chrips"`
-	Users  map[int]User  `json:"users"`
+	Chirps map[int]Chirp    `json:"chrips"`
+	Users  map[int]User     `json:"users"`
+	Tokens map[string]Token `json:"tokens"`
 }
 
 type Chirp struct {
@@ -26,6 +28,12 @@ type User struct {
 	ID       int    `json:"id"`
 	Email    string `json:"email"`
 	Password []byte `json:"password"`
+}
+
+type Token struct {
+	Token      string    `json:"token"`
+	UserID     int       `json:"user_id"`
+	Expiration time.Time `json:"expiration"`
 }
 
 // Create a database
@@ -50,6 +58,7 @@ func (db *DB) ensureDB() error {
 		dbStruct := DBStructure{
 			Chirps: make(map[int]Chirp),
 			Users:  make(map[int]User),
+			Tokens: make(map[string]Token),
 		}
 		return db.writeDB(dbStruct)
 	}
@@ -68,6 +77,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 	dbStructure := DBStructure{
 		Chirps: make(map[int]Chirp),
 		Users:  make(map[int]User),
+		Tokens: make(map[string]Token),
 	}
 
 	//Convert the file data into the struct
