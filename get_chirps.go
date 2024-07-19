@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"strconv"
+
+	"github.com/scottEAdams1/Chirpy/internal/database"
 )
 
 // Get all the chirps in the database
@@ -12,7 +14,25 @@ func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJSON(w, http.StatusOK, chirps)
+	s := r.URL.Query().Get("author_id")
+	if s == "" {
+		respondWithJSON(w, http.StatusOK, chirps)
+		return
+	}
+	chirpsWithID := make([]database.Chirp, 0, len(chirps))
+	id, err := strconv.Atoi(s)
+	if err != nil {
+		respondWithError(w, 400, err.Error())
+		return
+	}
+
+	for _, chirp := range chirps {
+		if chirp.AuthorID == id {
+			chirpsWithID = append(chirpsWithID, chirp)
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, chirpsWithID)
 }
 
 // Get a single chirp from the database
