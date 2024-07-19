@@ -38,13 +38,15 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 
 	//Create a user without password
 	type User struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
+		ID          int    `json:"id"`
+		Email       string `json:"email"`
+		IsChirpyRed bool   `json:"is_chirpy_red"`
 	}
 
 	userWOPassword := User{
-		ID:    newUser.ID,
-		Email: newUser.Email,
+		ID:          newUser.ID,
+		Email:       newUser.Email,
+		IsChirpyRed: newUser.IsChirpyRed,
 	}
 	//Send response
 	respondWithJSON(w, http.StatusCreated, userWOPassword)

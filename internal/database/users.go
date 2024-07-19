@@ -34,9 +34,10 @@ func (db *DB) CreateUser(email string, password []byte) (User, error) {
 
 	//Create User in form of a struct
 	newUser := User{
-		ID:       nextID,
-		Email:    email,
-		Password: password,
+		ID:          nextID,
+		Email:       email,
+		Password:    password,
+		IsChirpyRed: false,
 	}
 
 	//Check user doesn't already exist
@@ -102,10 +103,16 @@ func (db *DB) GetUser(id int) (User, error) {
 }
 
 // Updates a user with new information
-func (db *DB) UpdateUser(id int, email string, password []byte) (User, error) {
+func (db *DB) UpdateUser(id int, email string, password []byte, isChirpyRed bool) (User, error) {
 	//Lock database
 	db.mux.Lock()
 	defer db.mux.Unlock()
+
+	//Load database into struct
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword(password, 1)
 	if err != nil {
@@ -114,15 +121,40 @@ func (db *DB) UpdateUser(id int, email string, password []byte) (User, error) {
 
 	//Create User in form of a struct
 	newUser := User{
-		ID:       id,
-		Email:    email,
-		Password: hashedPassword,
+		ID:          id,
+		Email:       email,
+		Password:    hashedPassword,
+		IsChirpyRed: isChirpyRed,
 	}
+
+	//Add the user to the database struct
+	dbStruct.Users[newUser.ID] = newUser
+
+	//Write database struct to the database file as JSON
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser, nil
+}
+
+func (db *DB) UpdateRed(user User) (User, error) {
+	//Lock database
+	db.mux.Lock()
+	defer db.mux.Unlock()
 
 	//Load database into struct
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return User{}, err
+	}
+
+	//Create User in form of a struct
+	newUser := User{
+		ID:          user.ID,
+		Email:       user.Email,
+		Password:    user.Password,
+		IsChirpyRed: true,
 	}
 
 	//Add the user to the database struct

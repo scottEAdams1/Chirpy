@@ -67,3 +67,26 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	sort.Slice(chirps, func(i, j int) bool { return chirps[i].ID < chirps[j].ID })
 	return chirps, nil
 }
+
+// Remove a single chirp
+func (db *DB) RemoveChirp(chirpID int) error {
+	//Lock database
+	db.mux.Lock()
+	defer db.mux.Unlock()
+
+	//Load database into struct
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	//Remove token from database struct
+	delete(dbStruct.Chirps, chirpID)
+
+	//Write database struct to the database file as JSON
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return err
+	}
+	return nil
+}

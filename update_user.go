@@ -24,8 +24,9 @@ func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 
 	//Receive the body from the json
 	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+		IsChirpyRed bool   `json:"is_chirpy_red"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
@@ -35,7 +36,14 @@ func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := cfg.DB.UpdateUser(userID, params.Email, []byte(params.Password))
+	var isChirpyRed bool
+	if params.IsChirpyRed {
+		isChirpyRed = true
+	} else {
+		isChirpyRed = false
+	}
+
+	user, err := cfg.DB.UpdateUser(userID, params.Email, []byte(params.Password), isChirpyRed)
 	if err != nil {
 		respondWithError(w, 400, err.Error())
 		return
