@@ -3,34 +3,22 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/scottEAdams1/Chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		respondWithError(w, 500, "Authorization header not found")
+	//Get the token string from the header
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	tokenString := authHeader[len("Bearer "):]
-	type MyCustomClaims struct {
-		jwt.RegisteredClaims
-	}
-	claims := &MyCustomClaims{}
-	_, err := jwt.ParseWithClaims(tokenString, claims, func(*jwt.Token) (interface{}, error) {
-		return []byte(cfg.jwtSecret), nil
-	})
+	//Get the user ID from the token string
+	userID, err := auth.GetUserID(tokenString, cfg.jwtSecret)
 	if err != nil {
-		respondWithError(w, 401, "Unauthorised")
-		return
-	}
-	userID := claims.Subject
-	userIDint, err := strconv.Atoi(userID)
-	if err != nil {
-		respondWithError(w, 400, err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -47,7 +35,7 @@ func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := cfg.DB.UpdateUser(userIDint, params.Email, []byte(params.Password))
+	user, err := cfg.DB.UpdateUser(userID, params.Email, []byte(params.Password))
 	if err != nil {
 		respondWithError(w, 400, err.Error())
 		return

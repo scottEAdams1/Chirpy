@@ -6,18 +6,16 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/scottEAdams1/Chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) refresh(w http.ResponseWriter, r *http.Request) {
-	//Get the Authorization header
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		respondWithError(w, 500, "Authorization header not found")
+	//Get the token string from the header
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
-
-	//Get the string for the refresh token
-	tokenString := authHeader[len("Bearer "):]
 
 	//Get the token from the database
 	token, err := cfg.DB.GetToken(tokenString)

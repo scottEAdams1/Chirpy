@@ -5,17 +5,33 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/scottEAdams1/Chirpy/internal/auth"
 )
 
 // Create a chirp and add it to the database
 func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
+	//Get the token string from the header
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	//Get the user ID from the token string
+	userID, err := auth.GetUserID(tokenString, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	//Receive the body from the json
 	type parameters struct {
 		Body string `json:"body"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, 500, err.Error())
 		return
@@ -31,7 +47,7 @@ func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
 	cleaned := getCleanedBody(params.Body)
 
 	//Create a chirp from the cleaned text
-	newChirp, err := cfg.DB.CreateChirp(cleaned)
+	newChirp, err := cfg.DB.CreateChirp(cleaned, userID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return

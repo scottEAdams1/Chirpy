@@ -3,7 +3,7 @@ package database
 import "sort"
 
 // Create a chirp
-func (db *DB) CreateChirp(body string) (Chirp, error) {
+func (db *DB) CreateChirp(body string, author_id int) (Chirp, error) {
 	//Lock database
 	db.mux.Lock()
 	defer db.mux.Unlock()
@@ -29,8 +29,9 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 
 	//Create Chirp in form of a struct
 	newChirp := Chirp{
-		ID:   nextID,
-		Body: body,
+		ID:       nextID,
+		Body:     body,
+		AuthorID: author_id,
 	}
 
 	//Add the chirp to the database struct

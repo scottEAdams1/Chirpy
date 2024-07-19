@@ -1,19 +1,20 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/scottEAdams1/Chirpy/internal/auth"
+)
 
 func (cfg *apiConfig) revoke(w http.ResponseWriter, r *http.Request) {
-	//Get the Authorization header
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		respondWithError(w, 500, "Authorization header not found")
+	//Get the token string from the header
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	//Get the string for the refresh token
-	tokenString := authHeader[len("Bearer "):]
-
-	err := cfg.DB.RemoveToken(tokenString)
+	err = cfg.DB.RemoveToken(tokenString)
 	if err != nil {
 		respondWithError(w, 400, err.Error())
 		return
