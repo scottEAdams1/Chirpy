@@ -3,9 +3,24 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/scottEAdams1/Chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) chirpyRed(w http.ResponseWriter, r *http.Request) {
+	//Get API key from header
+	key, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, err.Error())
+		return
+	}
+
+	//Check API is the correct one
+	if key != cfg.polkaKey {
+		w.WriteHeader(401)
+		return
+	}
+
 	//Receive the body from the json
 	type data struct {
 		UserID int `json:"user_id"`
@@ -16,7 +31,7 @@ func (cfg *apiConfig) chirpyRed(w http.ResponseWriter, r *http.Request) {
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, 500, err.Error())
 		return

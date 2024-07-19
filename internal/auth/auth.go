@@ -11,7 +11,7 @@ import (
 func GetBearerToken(headers http.Header) (string, error) {
 	authHeader := headers.Get("Authorization")
 	if authHeader == "" {
-		return "", errors.New("nuthorization header not found")
+		return "", errors.New("authorization header not found")
 	}
 
 	tokenString := authHeader[len("Bearer "):]
