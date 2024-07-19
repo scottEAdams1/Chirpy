@@ -9,18 +9,33 @@ import (
 
 // Get all the chirps in the database
 func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	//Get chirps from database
 	chirps, err := cfg.DB.GetChirps()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	s := r.URL.Query().Get("author_id")
-	if s == "" {
+
+	//Optional, set chirps to be return in ascending or descending order
+	order := r.URL.Query().Get("sort")
+	if order == "desc" {
+		chirpsTemp := make([]database.Chirp, 0, len(chirps))
+		for i := len(chirps) - 1; i > -1; i-- {
+			chirpsTemp = append(chirpsTemp, chirps[i])
+		}
+		chirps = chirpsTemp
+	}
+
+	//Optional, get id to return only their chirps
+	idString := r.URL.Query().Get("author_id")
+	if idString == "" {
 		respondWithJSON(w, http.StatusOK, chirps)
 		return
 	}
+
+	//Get chirps with that id
 	chirpsWithID := make([]database.Chirp, 0, len(chirps))
-	id, err := strconv.Atoi(s)
+	id, err := strconv.Atoi(idString)
 	if err != nil {
 		respondWithError(w, 400, err.Error())
 		return
